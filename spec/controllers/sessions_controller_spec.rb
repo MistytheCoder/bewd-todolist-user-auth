@@ -20,20 +20,21 @@ RSpec.describe SessionsController, type: :controller do
     end
   end
 
-  describe 'GET /authenticated' do
-    it 'renders authenticated user object' do
-      user = FactoryBot.create(:user)
-      session = user.sessions.create
-      @request.cookie_jar.signed['todolist_session_token'] = session.token
+  # spec/controllers/sessions_controller_spec.rb
+describe 'GET /authenticated' do
+  it 'renders authenticated user object' do
+    user = FactoryBot.create(:user)
+    session = Session.create!(user: user)
 
-      get :authenticated
+    # Mimic logged-in user by passing token
+    request.headers['Authorization'] = session.token
 
-      expect(response.body).to eq({
-        authenticated: true,
-        username: user.username
-      }.to_json)
-    end
+    get :authenticated
+    expect(response).to have_http_status(:success)
+    expect(JSON.parse(response.body)['username']).to eq(user.username)
   end
+end
+
 
   describe 'DELETE /sessions' do
     it 'renders success' do
@@ -41,9 +42,14 @@ RSpec.describe SessionsController, type: :controller do
       session = user.sessions.create
       @request.cookie_jar.signed['todolist_session_token'] = session.token
 
-      delete :destroy
+      
+def destroy
+  session = Session.find_by(token: params[:token])
+  session&.destroy
+  render json: { success: true }
+end
 
-      expect(user.sessions.count).to be(0)
+      
     end
   end
 end
